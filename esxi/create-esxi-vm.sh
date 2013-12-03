@@ -3,8 +3,8 @@ set -e
 
 #TODO: use getops for command line parsing
 
-if [ $# -lt 13 ]; then
-    echo "Usage: $0 <datastore> <guest_os> <vm_name> <resource_pool_name> <ram> <vcpus> <vcores> <vmdk_size> <vmdk_template_path> <iso_path> <vmware_tools_iso> <floppy_template_path> <boot_vm> (<port_group_name>)*"
+if [ $# -lt 15 ]; then
+    echo "Usage: $0 <datastore> <guest_os> <vm_name> <resource_pool_name> <ram> <vcpus> <vcores> <vmdk_size> <vmdk_template_path> <iso_path> <vmware_tools_iso> <floppy_template_path> <nested_hypervisor_support> <net_adapter_type> <boot_vm> (<port_group_name>)*"
     exit 1
 fi
 
@@ -20,8 +20,10 @@ VMDK_TEMPLATE_PATH=$9
 ISO_PATH=$10
 VMWARE_TOOLS_ISO=$11
 FLOPPY_TEMPLATE_PATH=$12
-BOOT=$13
-FIRST_NETWORK_IDX=14
+NESTED_HYPERVISOR=$13
+NET_ADAPTER_TYPE=$14
+BOOT=$15
+FIRST_NETWORK_IDX=16
 
 VMDK_FILE_NAME=$VM_NAME.vmdk
 FLOPPY_FILE_NAME=floppy.flp
@@ -41,6 +43,16 @@ if [ "$POOL_NAME" != "-" ]; then
         echo "Resource pool $POOL_NAME not found"
         exit 1
     fi
+fi
+
+if [ "$ISO_PATH" != "-" ] && [ ! -f "$ISO_PATH" ]; then
+    echo "ISO file $ISO_PATH not found"
+    exit 1
+fi
+
+if [ "$FLOPPY_TEMPLATE_PATH" != "-" ] && [ ! -f "$FLOPPY_TEMPLATE_PATH" ]; then
+    echo "Floppy image file $FLOPPY_TEMPLATE_PATH not found"
+    exit 1
 fi
 
 mkdir -p $BASE_DIR
@@ -126,6 +138,14 @@ tools.syncTime = "FALSE"
 bios.bootOrder = "hdd,cdrom,floppy"
 EOF
 
+if [ "$NESTED_HYPERVISOR" == "true" ]; then
+    cat << EOF >> "$VMX_PATH"
+vcpu.hotadd = "FALSE"
+featMask.vm.hv.capable = "Min:1"
+vhv.enable = "TRUE"
+EOF
+fi
+
 if [ -n "$LINKED_SNAPSHOT" ]; then
     cat << EOF >> "$VMX_PATH"
 snapshot.redoNotWithParent = "true"
@@ -166,7 +186,7 @@ do
     if [[ $i -gt $FIRST_NETWORK_IDX || $i -eq $FIRST_NETWORK_IDX ]]; then
             cat << EOF >> "$VMX_PATH"
 ethernet$j.present = "TRUE"                                        
-ethernet$j.virtualDev = "e1000e"                                   
+ethernet$j.virtualDev = "$NET_ADAPTER_TYPE"                                   
 ethernet$j.networkName = "$p"                            
 ethernet$j.addressType = "generated"
 EOF
