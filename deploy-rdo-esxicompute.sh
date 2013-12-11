@@ -24,15 +24,18 @@ BASEDIR=$(dirname $0)
 . $BASEDIR/utils.sh
 
 ESXI_BASEDIR=/vmfs/volumes/$SCRIPTS_DATASTORE/unattended-scripts
-RDO_VM_IPS_FILE=`mktemp -u /tmp/rdo_ips.XXXXXX`
+RDO_VM_IPS_FILE_1=`mktemp -u /tmp/rdo_ips.XXXXXX`
 
-ssh $ESXI_1_USER@$ESXI_1_HOST $ESXI_BASEDIR/deploy-rdo-esxicompute-vms.sh $DATASTORE $RDO_NAME "CONTROLLER" $ESXI_PUBLIC_SWITCH $ESXI_PUBLIC_VNIC "$LINUX_TEMPLATE_VMDK" $RDO_VM_IPS_FILE
-read CONTROLLER_VM_NAME CONTROLLER_VM_IP <<< `ssh $ESXI_USER@$ESXI_HOST "cat $RDO_VM_IPS_FILE" | perl -n -e'/^(.+)\:(.+)$/ && print "$1\n$2\n"'`
+RDO_VM_IPS_FILE_2=`mktemp -u /tmp/rdo_ips.XXXXXX`
 
-ssh $ESXI_2_USER@$ESXI_2_HOST $ESXI_BASEDIR/deploy-rdo-esxicompute-vms.sh $DATASTORE $RDO_NAME "COMPUTE" $ESXI_PUBLIC_SWITCH $ESXI_PUBLIC_VNIC "$LINUX_TEMPLATE_VMDK" $RDO_VM_IPS_FILE
-read COMPUTE_VM_NAME COMPUTE_VM_IP <<< `ssh $ESXI_USER@$ESXI_HOST "cat $RDO_VM_IPS_FILE" | perl -n -e'/^(.+)\:(.+)$/ && print "$1\n$2\n"'`
-
-
+ssh $ESXI_1_USER@$ESXI_1_HOST $ESXI_BASEDIR/deploy-rdo-esxicompute-vms.sh $DATASTORE $RDO_NAME "CONTROLLER" $ESXI_PUBLIC_SWITCH $ESXI_PUBLIC_VNIC "$LINUX_TEMPLATE_VMDK" $RDO_VM_IPS_FILE_1
+read CONTROLLER_VM_NAME CONTROLLER_VM_IP <<< `ssh $ESXI_1_USER@$ESXI_1_HOST "cat $RDO_VM_IPS_FILE" | perl -n -e'/^(.+)\:(.+)$/ && print "$1\n$2\n"'`
+echo $CONTROLLER_VM_NAME
+echo $CONTROLLER_VM_IP
+ssh $ESXI_2_USER@$ESXI_2_HOST $ESXI_BASEDIR/deploy-rdo-esxicompute-vms.sh $DATASTORE $RDO_NAME "COMPUTE" $ESXI_PUBLIC_SWITCH $ESXI_PUBLIC_VNIC "$LINUX_TEMPLATE_VMDK" $RDO_VM_IPS_FILE_2
+read COMPUTE_VM_NAME COMPUTE_VM_IP <<< `ssh $ESXI_2_USER@$ESXI_2_HOST "cat $RDO_VM_IPS_FILE" | perl -n -e'/^(.+)\:(.+)$/ && print "$1\n$2\n"'`
+echo $COMPUTE_VM_NAME
+echo $COMPUTE_VM_IP
 
 #SSH_KEY_FILE=`mktemp -u /tmp/rdo_ssh_key.XXXXXX`
 #ssh-keygen -q -t rsa -f $SSH_KEY_FILE -N "" -b 4096
