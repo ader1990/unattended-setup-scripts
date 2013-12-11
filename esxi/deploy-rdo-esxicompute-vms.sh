@@ -26,9 +26,9 @@ POOL_NAME=$RDO_NAME
 
 LINUX_GUEST_OS=rhel6-64
 
-VM_ROLE="$RDO_NAME"-"$ROLE_NAME"
+CONTROLLER_VM_NAME="$RDO_NAME"-"$ROLE_NAME"
 
-CONTROLLER_VM_RAM=2048
+CONTROLLER_VM_RAM=4096
 
 NET_ADAPTER_TYPE=vmxnet3
 
@@ -59,9 +59,9 @@ if [ -z "$SWITCH_EXISTS" ]; then
     $BASEDIR/create-esxi-switch.sh "$DATA_NETWORK"
 fi
 
-$BASEDIR/delete-esxi-vm.sh "$VM_ROLE" $DATASTORE
+$BASEDIR/delete-esxi-vm.sh "$CONTROLLER_VM_NAME" $DATASTORE
 
-$BASEDIR/create-esxi-vm.sh $DATASTORE $LINUX_GUEST_OS $VM_ROLE $POOL_NAME $CONTROLLER_VM_RAM 4 2 - $LINUX_TEMPLATE_VMDK - - - false $NET_ADAPTER_TYPE true "$MGMT_NETWORK"
+$BASEDIR/create-esxi-vm.sh $DATASTORE $LINUX_GUEST_OS $CONTROLLER_VM_NAME $POOL_NAME $CONTROLLER_VM_RAM 4 2 - $LINUX_TEMPLATE_VMDK - - - false $NET_ADAPTER_TYPE true "$MGMT_NETWORK" "$EXT_NETWORK" "$DATA_NETWORK"
 
 LINUX_TEMPLATE_PARENT_FILE_HINT=`grep parentFileNameHint "$LINUX_TEMPLATE_VMDK" || true`
 
@@ -70,8 +70,8 @@ if [ -n "$LINUX_TEMPLATE_PARENT_FILE_HINT" ]; then
     # this requires additional investigation
     sleep 20
 
-    echo "Powering on $VM_ROLE"
-    $BASEDIR/power-on-esxi-vm.sh "$VM_ROLE" > /dev/null
+    echo "Powering on $CONTROLLER_VM_NAME"
+    $BASEDIR/power-on-esxi-vm.sh "$CONTROLLER_VM_NAME" > /dev/null
 fi
 
 # So far so good. Get the VM ips
@@ -81,9 +81,9 @@ echo "Waiting for guest IPs..."
 INTERVAL=5
 MAX_WAIT=600
 
-CONTROLLER_VM_IP=`$BASEDIR/get-esxi-vm-guest-ip-address-wait.sh "$VM_ROLE" "$MGMT_NETWORK" true $INTERVAL $MAX_WAIT`
-echo "$VM_ROLE":"$CONTROLLER_VM_IP"
+CONTROLLER_VM_IP=`$BASEDIR/get-esxi-vm-guest-ip-address-wait.sh "$CONTROLLER_VM_NAME" "$MGMT_NETWORK" true $INTERVAL $MAX_WAIT`
+echo "$CONTROLLER_VM_NAME":"$CONTROLLER_VM_IP"
 
 if [ -n "$GUEST_IPS_FILENAME" ]; then
-    echo "$VM_ROLE":"$CONTROLLER_VM_IP" > "$GUEST_IPS_FILENAME"
+    echo "$CONTROLLER_VM_NAME":"$CONTROLLER_VM_IP" > "$GUEST_IPS_FILENAME"
 fi
